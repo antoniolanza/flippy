@@ -1,0 +1,112 @@
+{
+  "name": "Flippy - Tool: Recipe Ingredients",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "dish"
+            }
+          ]
+        }
+      },
+      "id": "61a48e74-e1cc-4b3e-9ffa-4f5f9908326c",
+      "name": "When called by AI Agent",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'claude-haiku-4-5',\n  max_tokens: 512,\n  system: 'You extract grocery shopping lists from recipe or dish names. Output ONLY a JSON array of grocery item names — no prose, no numbers, no markdown. Skip pantry staples (salt, pepper, basic cooking oil, water) unless central. Use shopping-friendly terms (\"chicken thighs\" not \"boneless skinless chicken thighs, 2 lbs\"). Aim for 5-12 items.',\n  messages: [{ role: 'user', content: 'Extract grocery shopping list for: ' + $json.dish + '\\n\\nReturn ONLY a JSON array like [\"item1\", \"item2\"]' }]\n}) }}",
+        "options": {}
+      },
+      "id": "9df79d08-beba-4769-afb0-500f9be3d8df",
+      "name": "Ask Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        240,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "vQQGY3FSgnUiQCgr",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const dish = $('When called by AI Agent').first().json.dish || 'unknown dish';\nconst raw = $json.content && $json.content[0] ? $json.content[0].text : '[]';\n\n// Try to parse a JSON array out of the response\nlet ingredients = [];\ntry {\n  const match = raw.match(/\\[[\\s\\S]*\\]/);\n  if (match) {\n    ingredients = JSON.parse(match[0]);\n  }\n} catch(e) {\n  ingredients = [];\n}\n\nif (!Array.isArray(ingredients) || ingredients.length === 0) {\n  return [{ json: { response: 'Could not extract ingredients for ' + dish + '. Ask the user what they want to make.' } }];\n}\n\nreturn [{\n  json: {\n    response: 'Ingredients for ' + dish + ': ' + JSON.stringify(ingredients) + '\\n\\nNow search Flipp for each of these items individually.'\n  }\n}];"
+      },
+      "id": "ba4d1ea4-9b73-4700-83ab-46370a3f0604",
+      "name": "Parse Ingredients",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When called by AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Ask Claude",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask Claude": {
+      "main": [
+        [
+          {
+            "node": "Parse Ingredients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "85df0f5e-0eeb-4199-b375-910962ed5b9b",
+  "meta": {
+    "instanceId": "06a02ae25369c37860a41af192fe8129063ec46caeb0a691eb608778ef7793bc"
+  },
+  "id": "XpxL0pLhA6EIEaGb",
+  "tags": []
+}

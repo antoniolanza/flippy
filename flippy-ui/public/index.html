@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#16a34a" />
+  <title>Flippy — Grocery Deals</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/icon.svg" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-icon">🛒</span>
+        <div class="brand-text">
+          <h1>Flippy</h1>
+          <span class="tagline">Calgary flyer deals</span>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <button id="btn-new-chat" class="icon-btn" title="New chat" aria-label="New chat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <button id="btn-settings" class="icon-btn" title="Settings" aria-label="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.09a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main id="chat" class="chat" aria-live="polite">
+      <!-- messages get appended here -->
+    </main>
+
+    <div id="quick-actions" class="quick-actions">
+      <button class="chip" data-prompt="What's good this week?">✨ What's good this week?</button>
+      <button class="chip" data-prompt="What are my favourites?">⭐ My favourites</button>
+      <button class="chip" data-prompt="Deals on chicken">🍗 Chicken deals</button>
+      <button class="chip" data-prompt="Ingredients for taco night">🌮 Taco night</button>
+    </div>
+
+    <footer class="composer">
+      <form id="chat-form" autocomplete="off">
+        <textarea id="chat-input" rows="1" placeholder="Ask about deals, recipes, or your list…" enterkeyhint="send"></textarea>
+        <button id="btn-send" type="submit" class="send-btn" aria-label="Send" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
+        </button>
+      </form>
+    </footer>
+
+    <!-- Settings / first-run setup modal -->
+    <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-card">
+        <h2 id="modal-title">Connect to n8n</h2>
+        <p class="modal-sub">Enter the address of your n8n instance on your network. The webhook path is filled in automatically.</p>
+        <input id="n8n-url" type="text" placeholder="http://192.168.1.50:5678" inputmode="url" />
+        <p id="modal-error" class="modal-error hidden"></p>
+        <div class="modal-actions">
+          <button id="modal-cancel" class="btn ghost hidden">Cancel</button>
+          <button id="modal-save" class="btn primary">Save &amp; connect</button>
+        </div>
+        <details class="modal-help">
+          <summary>Where do I find this?</summary>
+          <p>It's the URL you use to open n8n in your browser, e.g. <code>http://192.168.1.50:5678</code>. You can also paste the full chat webhook URL from the Chat trigger node.</p>
+          <p>Make sure the <strong>Chat</strong> trigger in the Flippy workflow has <em>“Make chat publicly available”</em> switched on, and the workflow is <strong>Active</strong>.</p>
+        </details>
+      </div>
+    </div>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

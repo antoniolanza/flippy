@@ -1,0 +1,71 @@
+{
+  "name": "Flippy - Tool: Manage Favourites",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "action"
+            },
+            {
+              "name": "item"
+            },
+            {
+              "name": "store"
+            },
+            {
+              "name": "userId"
+            }
+          ]
+        }
+      },
+      "id": "0710de3e-7f37-4872-a295-22bb66e49dcd",
+      "name": "When called by AI Agent",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const action = $json.action || 'list';\n// Favourites are keyed by userId (stable per household); sessionId kept as a\n// fallback for older callers. Note: staticData resets if this workflow is edited.\nconst userId = $json.userId || $json.sessionId || 'household';\nconst item = ($json.item || '').trim().toLowerCase();\nconst store = ($json.store || '').trim();\n\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.favourites) staticData.favourites = {};\nif (!staticData.favourites[userId]) staticData.favourites[userId] = [];\n\nconst favs = staticData.favourites[userId];\nlet response = '';\n\nif (action === 'save') {\n  if (!item || item.length < 2) {\n    response = 'Could not save: item name was empty.';\n  } else {\n    const existing = favs.find(function(f) { return f.name === item; });\n    if (existing) {\n      if (store) existing.store = store;\n      response = 'Already saved \"' + item + '\"' + (store ? ' (updated preferred store to ' + store + ')' : '') + '.';\n    } else {\n      const entry = { name: item, addedAt: new Date().toISOString() };\n      if (store) entry.store = store;\n      favs.push(entry);\n      response = 'Saved \"' + item + '\" to favourites' + (store ? ' (preferred store: ' + store + ')' : '') + '.';\n    }\n  }\n} else if (action === 'remove') {\n  // Exact match first so removing \"milk\" doesn't take \"milk chocolate\" with it;\n  // fall back to substring match only when nothing matched exactly.\n  const before = favs.length;\n  let next = favs.filter(function(f) { return f.name !== item; });\n  if (next.length === before) {\n    next = favs.filter(function(f) { return f.name.indexOf(item) === -1; });\n  }\n  staticData.favourites[userId] = next;\n  const removed = before - next.length;\n  response = removed > 0\n    ? 'Removed ' + removed + ' favourite(s) matching \"' + item + '\".'\n    : 'No favourites matched \"' + item + '\".';\n} else if (action === 'list') {\n  if (favs.length === 0) {\n    response = 'No favourites saved yet.';\n  } else {\n    response = 'Saved favourites:\\n' + favs.map(function(f) {\n      return '- ' + f.name + (f.store ? ' (prefers ' + f.store + ')' : '');\n    }).join('\\n');\n  }\n} else if (action === 'list_json') {\n  // Machine-readable list for the weekly digest workflow.\n  response = JSON.stringify(favs);\n} else {\n  response = 'Unknown action: ' + action;\n}\n\nreturn [{ json: { response: response } }];"
+      },
+      "id": "79b4f46f-55af-4489-8b72-bf732c71d1c8",
+      "name": "Manage Favourites",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When called by AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Manage Favourites",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "8f9f82a6-dce3-43fb-8867-881537aeb65c",
+  "meta": {
+    "instanceId": "06a02ae25369c37860a41af192fe8129063ec46caeb0a691eb608778ef7793bc"
+  },
+  "id": "25IHczi0KbWSPYDO",
+  "tags": []
+}

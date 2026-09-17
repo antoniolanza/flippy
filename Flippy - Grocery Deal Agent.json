@@ -1,0 +1,639 @@
+{
+  "name": "Flippy - Grocery Deal Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Normalize the incoming chat payload.\n// sessionId scopes conversation memory (new per chat); userId scopes favourites (stable per household).\n// Favourites live in the Manage Favourites sub-workflow's storage, so they are\n// fetched via the next node rather than read from this workflow's staticData.\nconst input = $input.first().json;\nconst sessionId = input.sessionId || 'default';\nconst userId = input.userId || 'household';\nconst message = input.chatInput || '';\n\nreturn [{\n  json: {\n    sessionId: sessionId,\n    userId: userId,\n    message: message,\n    action: 'list'\n  }\n}];"
+      },
+      "id": "d04faa01-28bc-44df-9ad2-6a4184be029d",
+      "name": "Load State",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "25IHczi0KbWSPYDO",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/25IHczi0KbWSPYDO",
+          "cachedResultName": "Flippy - Tool: Manage Favourites"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "action": "list",
+            "item": "",
+            "store": "",
+            "userId": "={{ $json.userId }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "action",
+              "displayName": "action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "item",
+              "displayName": "item",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "store",
+              "displayName": "store",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "userId",
+              "displayName": "userId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "f1b2c3d4-0001-4a00-9000-1a2b3c4d5e6f",
+      "name": "Get Favourites",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        416,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge the favourites list into the context the agent sees.\nconst state = $('Load State').first().json;\nconst favResponse = ($input.first().json && $input.first().json.response) || '';\n\nlet favouritesText = 'No favourites saved yet.';\nif (favResponse.indexOf('Saved favourites:') === 0) {\n  favouritesText = favResponse.replace('Saved favourites:\\n', '');\n}\n\nreturn [{\n  json: {\n    sessionId: state.sessionId,\n    userId: state.userId,\n    message: state.message,\n    favouritesText: favouritesText\n  }\n}];"
+      },
+      "id": "f1b2c3d4-0002-4a00-9000-6f5e4d3c2b1a",
+      "name": "Prep Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "description": "Save an item to the user's favourites list. Optionally include their preferred store. Call when user says they always buy something, asks to remember an item, or wants to add to favourites.",
+        "workflowId": {
+          "__rl": true,
+          "value": "25IHczi0KbWSPYDO",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/25IHczi0KbWSPYDO",
+          "cachedResultName": "Flippy - Tool: Manage Favourites"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "action": "save",
+            "item": "={{ $fromAI('item', 'The grocery item name to save', 'string') }}",
+            "store": "={{ $fromAI('store', 'Optional preferred store. Pass empty string if not specified.', 'string') }}",
+            "userId": "={{ $('Load State').first().json.userId }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "action",
+              "displayName": "action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "item",
+              "displayName": "item",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "store",
+              "displayName": "store",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "userId",
+              "displayName": "userId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "id": "ad2d8a56-457f-40a7-a2fa-67bc262a1fd6",
+      "name": "save_favourite",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        912,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "description": "Get the user's saved favourite grocery items. Use when user asks 'what are my favourites', 'my list', 'what do I usually buy'.",
+        "workflowId": {
+          "__rl": true,
+          "value": "25IHczi0KbWSPYDO",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/25IHczi0KbWSPYDO",
+          "cachedResultName": "Flippy - Tool: Manage Favourites"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "action": "list",
+            "item": "",
+            "store": "",
+            "userId": "={{ $('Load State').first().json.userId }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "action",
+              "displayName": "action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "item",
+              "displayName": "item",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "store",
+              "displayName": "store",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "userId",
+              "displayName": "userId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "id": "5fac6633-f720-4780-b8e1-6844c2ef619e",
+      "name": "list_favourites",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "description": "Remove an item from the user's favourites list. Call when user says forget X, remove X from favourites, stop tracking X.",
+        "workflowId": {
+          "__rl": true,
+          "value": "25IHczi0KbWSPYDO",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/25IHczi0KbWSPYDO",
+          "cachedResultName": "Flippy - Tool: Manage Favourites"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "action": "remove",
+            "item": "={{ $fromAI('item', 'The grocery item name to remove', 'string') }}",
+            "store": "",
+            "userId": "={{ $('Load State').first().json.userId }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "action",
+              "displayName": "action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "item",
+              "displayName": "item",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "store",
+              "displayName": "store",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "userId",
+              "displayName": "userId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "id": "d0faf6a2-edc4-43c2-9eb3-66759f0ee3f2",
+      "name": "remove_favourite",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1168,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-5",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 5"
+        },
+        "options": {
+          "maxTokensToSample": 4096
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        352,
+        224
+      ],
+      "id": "34aaf3e7-ff68-4467-8d65-9ed954490150",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "1tgqXngOpzlSzdxY",
+          "name": "Anthropic account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "availableInChat": true,
+        "agentIcon": {
+          "type": "icon",
+          "value": "circle-user-round"
+        },
+        "agentName": "Flippy",
+        "options": {
+          "responseMode": "streaming"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        16,
+        0
+      ],
+      "id": "7fe75404-dbf7-4486-a3a3-609206b847fc",
+      "name": "Chat",
+      "webhookId": "d9ca4194-9e36-4426-a7b4-d568171add51",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message }}",
+        "options": {
+          "systemMessage": "=You are Flippy — a sharp, friendly grocery deal agent for a user in Calgary, Alberta. You help your user find the best flyer deals using Flipp.\n\nYour personality: Practical, helpful, slightly playful. You like saving people money. You're like a savvy friend who reads every flyer for fun.\n\n## Your capabilities (via tools)\n\n1. **search_flipp** — Look up live deals on a single grocery item across all Calgary flyers (Superstore, Save-On, Walmart, No Frills, Costco, Safeway, etc.). Use this for every distinct item. ALWAYS call this when the user mentions specific groceries.\n\n2. **get_recipe_ingredients** — When a user mentions a recipe, dish, or meal idea (\"brisket dinner\", \"taco night\", \"making lasagna\"), use this to get the ingredient list, THEN search each ingredient individually using search_flipp.\n\n3. **save_favourite / list_favourites / remove_favourite** — Manage the user's favourite items list. Save favourites when user says \"I always buy X\", \"remember that I like X\", \"add X to favourites\".\n\n## How to handle requests\n\n- **Single item** (\"deals on chicken\"): call search_flipp once.\n- **Grocery list** (\"milk, eggs, bread, chicken\"): call search_flipp for each item in parallel.\n- **Recipe / meal** (\"brisket dinner\", \"making chili\"): call get_recipe_ingredients first, then search_flipp for each ingredient. Be smart — skip pantry staples (salt, pepper, oil) unless they're requested explicitly.\n- **\"What's good this week?\"** with no specifics: search the user's saved favourites.\n- **Save preference** (\"I always buy No Name pasta\"): call save_favourite, confirm it.\n\n## How to present deals\n\nEvery deal you receive includes: name, price, store, quantity (item_weight), price prefix (e.g. \"2 for\"), price suffix (e.g. \"/lb\"), original price, % off, sale story (e.g. \"Limit 2\"), and validity dates.\n\nALWAYS show in this format for each deal:\n  • [Item name] — [pricePrefix if any] $[price] [priceSuffix if any] [quantity if any] @ [store] (valid until [date]) [savings note]\n\nExamples:\n  • Coors Original 12-pack — $24.99 @ Co-op Liquor (valid until May 14) — Save $5 (17% off)\n  • Boneless Chicken Breast — $5.99/lb @ Safeway (valid until May 14)\n  • Yogurt — 2 for $7 @ No Frills (valid until May 14) — 500g each\n\nRules:\n- ALWAYS include quantity/size when available (12-pack, 500g, /lb, etc.)\n- ALWAYS include the savings or % off when the original price was higher\n- ALWAYS include the sale_story if present (\"Limit 2\", \"Members only\")\n- Show ALL deals returned by the tool, sorted by price ascending\n- Group by item if searching multiple items\n- Lead each section with the best deal\n- Don't rank per-weight prices (/lb, /100g) against per-item prices as if comparable — group them separately or note the unit difference when picking a \"best\" deal\n- Don't speculate about prices not in the data (no \"Costco might have...\" commentary)\n- Be exhaustive on data, brief on commentary\n## Context for this conversation\n\nUser's saved favourites:\n{{ $json.favouritesText }}\n\nUser ID for tool calls: {{ $json.userId }}",
+          "maxIterations": 15,
+          "batching": {
+            "batchSize": 1,
+            "delayBetweenBatches": 0
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        464,
+        0
+      ],
+      "id": "c7d00eca-d64c-469c-bbf8-975cf30740d1",
+      "name": "Flippy Agent",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Load State').first().json.sessionId }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        480,
+        224
+      ],
+      "id": "365b392d-9262-429a-a470-f4b3d6a92935",
+      "name": "Memory"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "gZvoW7SNIGTgPtyw",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/gZvoW7SNIGTgPtyw",
+          "cachedResultName": "Flippy - Tool: Flipp Search"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "query": "={{ $fromAI(\"query\", \"The grocery item to search for\", \"string\") }}"
+          },
+          "matchingColumns": [
+            "query"
+          ],
+          "schema": [
+            {
+              "id": "query",
+              "displayName": "query",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        624,
+        224
+      ],
+      "id": "15411ef5-e63b-4a86-983d-6efb3be374cf",
+      "name": "Tool: Search Flipp"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "XpxL0pLhA6EIEaGb",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/XpxL0pLhA6EIEaGb",
+          "cachedResultName": "Flippy - Tool: Recipe Ingredients"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "dish": "={{ $fromAI('dish', 'The recipe, dish, or meal name', 'string') }}"
+          },
+          "matchingColumns": [
+            "dish"
+          ],
+          "schema": [
+            {
+              "id": "dish",
+              "displayName": "dish",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        768,
+        224
+      ],
+      "id": "5bcc884a-3d20-4124-bd70-00f6ce0d1375",
+      "name": "Tool: Recipe Ingredients"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Load State": {
+      "main": [
+        [
+          {
+            "node": "Get Favourites",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Favourites": {
+      "main": [
+        [
+          {
+            "node": "Prep Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep Context": {
+      "main": [
+        [
+          {
+            "node": "Flippy Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "save_favourite": {
+      "ai_tool": [
+        [
+          {
+            "node": "Flippy Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "list_favourites": {
+      "ai_tool": [
+        [
+          {
+            "node": "Flippy Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "remove_favourite": {
+      "ai_tool": [
+        [
+          {
+            "node": "Flippy Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Flippy Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat": {
+      "main": [
+        [
+          {
+            "node": "Load State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flippy Agent": {
+      "main": [
+        []
+      ]
+    },
+    "Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Flippy Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Search Flipp": {
+      "ai_tool": [
+        [
+          {
+            "node": "Flippy Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Recipe Ingredients": {
+      "ai_tool": [
+        [
+          {
+            "node": "Flippy Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "7c2149e9-6357-4a21-b939-de021ea6465f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "06a02ae25369c37860a41af192fe8129063ec46caeb0a691eb608778ef7793bc"
+  },
+  "id": "s4k8piyolUVGUHRu",
+  "tags": []
+}

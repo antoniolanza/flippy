@@ -1,0 +1,116 @@
+﻿{
+  "name": "Flippy - Tool: Flipp Search",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "query"
+            }
+          ]
+        }
+      },
+      "id": "1af4e41d-3a93-4e80-8bd5-458a4114d336",
+      "name": "When called by AI Agent",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://backflipp.wishabi.com/flipp/items/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $json.query }}"
+            },
+            {
+              "name": "postal_code",
+              "value": "YOUR_POSTAL_CODE"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "4609f2a3-d4f0-4260-9fce-49c578cf9152",
+      "name": "Call Flipp API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "onError": "continueRegularOutput",
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const query = $('When called by AI Agent').first().json.query || 'unknown';\nconst data = $input.first().json;\n\n// The HTTP node continues on error; surface a friendly message instead of failing the tool call.\nif (data.error || !Array.isArray(data.items)) {\n  return [{ json: { response: 'Flipp is unavailable right now for \"' + query + '\" — try again in a minute.' } }];\n}\n\nconst items = (data.items || []).slice(0, 20);\n\nif (items.length === 0) {\n  return [{ json: { response: 'No deals found for \"' + query + '\" this week.' } }];\n}\n\nconst sorted = items.slice().sort(function(a, b) {\n  return (a.current_price || 999) - (b.current_price || 999);\n});\n\nconst seen = {};\nconst formatted = [];\n\nfor (const item of sorted) {\n  if (!item.name) continue;\n  \n  const store = item.merchant_name || item.merchant || 'unknown store';\n  const key = item.name.toLowerCase() + '|' + store.toLowerCase();\n  if (seen[key]) continue;\n  seen[key] = true;\n  \n  // Calculate % off if original_price exists\n  let percentOff = null;\n  if (item.original_price && item.current_price && item.original_price > item.current_price) {\n    percentOff = Math.round(((item.original_price - item.current_price) / item.original_price) * 100);\n  }\n  \n  formatted.push({\n    name: item.name,\n    price: item.current_price,\n    priceText: item.price_text,\n    pricePrefix: item.pre_price_text || null,    // \"2 for\", \"case of\"\n    priceSuffix: item.post_price_text || null,   // \"/lb\", \"each\"\n    quantity: item.item_weight || null,          // \"500g\", \"6-pack\"\n    originalPrice: item.original_price || null,\n    percentOff: percentOff,\n    saleStory: item.sale_story || null,          // \"Save $5\", \"Limit 2\"\n    store: store,\n    validFrom: item.valid_from ? item.valid_from.substring(0, 10) : null,\n    validTo: item.valid_to ? item.valid_to.substring(0, 10) : null\n  });\n  \n  if (formatted.length >= 12) break;\n}\n\nreturn [{\n  json: {\n    response: 'Found ' + formatted.length + ' deals for \"' + query + '\":\\n' + JSON.stringify(formatted, null, 2)\n  }\n}];"
+      },
+      "id": "26fc1b5d-72eb-4ffb-8cd4-33020a2bf7c3",
+      "name": "Format Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When called by AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Call Flipp API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Flipp API": {
+      "main": [
+        [
+          {
+            "node": "Format Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "c16df43f-9051-47a1-b62a-661860f8c165",
+  "meta": {
+    "instanceId": "06a02ae25369c37860a41af192fe8129063ec46caeb0a691eb608778ef7793bc"
+  },
+  "id": "gZvoW7SNIGTgPtyw",
+  "tags": []
+}

@@ -1,0 +1,9 @@
+﻿# Local UI config (contains your LAN n8n address)
+flippy-ui/config.json
+
+# Local Docker / env overrides
+flippy-ui/.env
+flippy-ui/docker-compose.override.yml
+
+# Editor / agent scratch
+.claude/

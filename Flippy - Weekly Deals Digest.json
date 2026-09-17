@@ -1,0 +1,294 @@
+{
+  "name": "Flippy - Weekly Deals Digest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                4
+              ],
+              "triggerAtHour": 8,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "d1c35701-0001-4a00-9000-a1b2c3d4e5f6",
+      "name": "Every Thursday 8am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ask the Manage Favourites workflow for the household's saved items.\nreturn [{ json: { action: 'list_json', userId: 'household' } }];"
+      },
+      "id": "d1c35701-0002-4a00-9000-b2c3d4e5f6a1",
+      "name": "Favourites Query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "25IHczi0KbWSPYDO",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/25IHczi0KbWSPYDO",
+          "cachedResultName": "Flippy - Tool: Manage Favourites"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "action": "list_json",
+            "item": "",
+            "store": "",
+            "userId": "household"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "action",
+              "displayName": "action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "item",
+              "displayName": "item",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "store",
+              "displayName": "store",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "userId",
+              "displayName": "userId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "d1c35701-0003-4a00-9000-c3d4e5f6a1b2",
+      "name": "Get Favourites",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        384,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// One output item per favourite. If there are none, output nothing and the run ends here.\nlet favs = [];\ntry {\n  favs = JSON.parse($input.first().json.response || '[]');\n} catch (e) {\n  favs = [];\n}\n\nreturn favs\n  .filter(function(f) { return f && f.name; })\n  .map(function(f) { return { json: { query: f.name, store: f.store || null } }; });"
+      },
+      "id": "d1c35701-0004-4a00-9000-d4e5f6a1b2c3",
+      "name": "Split Favourites",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        576,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "gZvoW7SNIGTgPtyw",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/gZvoW7SNIGTgPtyw",
+          "cachedResultName": "Flippy - Tool: Flipp Search"
+        },
+        "mode": "each",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "query": "={{ $json.query }}"
+          },
+          "matchingColumns": [
+            "query"
+          ],
+          "schema": [
+            {
+              "id": "query",
+              "displayName": "query",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "d1c35701-0005-4a00-9000-e5f6a1b2c3d4",
+      "name": "Search Deals",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        768,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build a compact plain-text digest: top 3 deals per favourite.\nconst sections = [];\n\nfor (const item of $input.all()) {\n  const resp = (item.json && item.json.response) || '';\n  const nameMatch = resp.match(/for \"([^\"]+)\"/);\n  const name = nameMatch ? nameMatch[1] : 'item';\n\n  const jsonStart = resp.indexOf('[');\n  let deals = [];\n  if (jsonStart !== -1) {\n    try { deals = JSON.parse(resp.slice(jsonStart)); } catch (e) { deals = []; }\n  }\n\n  if (!Array.isArray(deals) || deals.length === 0) {\n    sections.push(name + ': no deals this week');\n    continue;\n  }\n\n  const top = deals.slice(0, 3).map(function(d) {\n    let line = '  - ' + (d.name || name) + ' — ';\n    if (d.pricePrefix) line += d.pricePrefix + ' ';\n    line += d.price != null ? '$' + d.price : (d.priceText || '?');\n    if (d.priceSuffix) line += d.priceSuffix;\n    line += ' @ ' + (d.store || '?');\n    if (d.percentOff) line += ' (' + d.percentOff + '% off)';\n    return line;\n  });\n\n  sections.push(name.toUpperCase() + ':\\n' + top.join('\\n'));\n}\n\nconst body = sections.length\n  ? 'This week\\'s flyer deals on your favourites:\\n\\n' + sections.join('\\n\\n')\n  : 'No favourites saved yet — tell Flippy what you usually buy!';\n\nreturn [{ json: { body: body } }];"
+      },
+      "id": "d1c35701-0006-4a00-9000-f6a1b2c3d4e5",
+      "name": "Build Digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntfy.sh/flippy-deals-CHANGE-ME",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "Flippy weekly deals"
+            },
+            {
+              "name": "Tags",
+              "value": "shopping_cart"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.body }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "d1c35701-0007-4a00-9000-a2b3c4d5e6f1",
+      "name": "Send Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1152,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every Thursday 8am": {
+      "main": [
+        [
+          {
+            "node": "Favourites Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Favourites Query": {
+      "main": [
+        [
+          {
+            "node": "Get Favourites",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Favourites": {
+      "main": [
+        [
+          {
+            "node": "Split Favourites",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Favourites": {
+      "main": [
+        [
+          {
+            "node": "Search Deals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Deals": {
+      "main": [
+        [
+          {
+            "node": "Build Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Digest": {
+      "main": [
+        [
+          {
+            "node": "Send Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

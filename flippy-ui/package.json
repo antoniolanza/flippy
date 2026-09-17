@@ -1,0 +1,12 @@
+{
+  "name": "flippy-ui",
+  "version": "1.0.0",
+  "description": "Web UI for the Flippy grocery deal agent (n8n)",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

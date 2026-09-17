@@ -1,0 +1,11 @@
+﻿services:
+  flippy-ui:
+    build: .
+    container_name: flippy-ui
+    restart: unless-stopped
+    ports:
+      - "3080:3080"
+    environment:
+      # Set in .env (see .env.example). Locks the in-app settings screen when set.
+      # Same-compose n8n example: http://n8n:5678/webhook/<chat-webhook-id>/chat
+      - N8N_CHAT_URL=${N8N_CHAT_URL}
